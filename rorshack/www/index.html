@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Rorschach Art</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="cordova.js"></script>
+
     <style>
         /* CSS - Mirrored Drawing */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            
         }
 
         body {
@@ -24,6 +27,9 @@
             position: relative;
             overflow: hidden;
             gap: 20px; /* Space between canvas and toolbars */
+          /*******************************/
+
+
         }
 
         .canvas-container {
@@ -91,7 +97,7 @@
             font-size: 1.5rem; /* Increased icon size for bigger buttons */
             /* Added white glow to icons */
             text-shadow: 0 0 5px rgba(255, 255, 255, 0.8), /* Soft white glow */
-                                    0 0 10px rgba(255, 255, 255, 0.6); /* Stronger white glow */
+                                0 0 10px rgba(255, 255, 255, 0.6); /* Stronger white glow */
         }
 
 
@@ -249,7 +255,7 @@
 </head>
 <body>
     <div class="top-bar">
-        <button id="exportButton"><i class="fas fa-file-export"></i></button>
+        <button id="saveImageButton"><i class="fas fa-file-export"></i></button>
         <button id="helpButton"><i class="fas fa-question-circle"></i></button>
         <button id="undoButton"><i class="fas fa-undo"></i></button>
     </div>
@@ -305,6 +311,14 @@
         const hiddenBrushColorPicker = document.getElementById('hiddenBrushColorPicker');
         const hiddenBgColorPicker = document.getElementById('hiddenBgColorPicker');
 
+        // Wait for the deviceready event before using Cordova plugins
+        document.addEventListener('deviceready', onDeviceReady, false);
+
+        function onDeviceReady() {
+            console.log('Cordova Device is ready.');
+            // Only attach export button listener when Cordova is ready
+            document.getElementById('saveImageButton').addEventListener('click', exportCanvasImage);
+        }
 
         // Function to draw text on the main canvas (on top of background and strokes)
         function drawInstructionText() {
@@ -394,12 +408,9 @@
             // 1. Clear the main canvas
             mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
 
-            // 2. Fill the main canvas with the current background color ONLY if NOT in eraser mode
-            // Or, if you want the eraser to always reveal the page background:
-            // if (!eraserMode) { // This is the change
-                mainCtx.fillStyle = currentBackgroundColor;
-                mainCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
-            // }
+            // 2. Fill the main canvas with the current background color
+            mainCtx.fillStyle = currentBackgroundColor;
+            mainCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
 
             // 3. Draw the dividing line on the main canvas
             drawDividingLine();
@@ -587,25 +598,12 @@
             updateColorPickerBackground();
         });
 
-        // Background Color Picker Logic using hidden input
-        document.getElementById('bgColorButton').addEventListener('click', () => {
-            hiddenBgColorPicker.value = currentBackgroundColor; // Set its current value
-            hiddenBgColorPicker.click(); // Trigger the click
-        });
+        // Cordova Save Functionality for Export Button
+        async function exportCanvasImage() {
+            console.log("Attempting to export image using Cordova saveDialog...");
 
-        hiddenBgColorPicker.addEventListener('input', (e) => {
-            currentBackgroundColor = e.target.value;
-            restoreCanvasState(); // Redraw main canvas with new background immediately
-        });
-
-        // --- Cordova Specific Export/Download Logic ---
-        document.addEventListener('deviceready', onDeviceReady, false);
-
-        function onDeviceReady() {
-            console.log("Cordova is ready!");
-
-            document.getElementById('exportButton').addEventListener('click', () => {
-                // Ensure the exported image has the correct background, dividing line, and drawing layer
+            try {
+                // Create a temporary canvas to combine background and drawing
                 const exportCanvas = document.createElement('canvas');
                 exportCanvas.width = mainCanvas.width;
                 exportCanvas.height = mainCanvas.height;
@@ -627,177 +625,49 @@
                 exportCtx.globalCompositeOperation = 'source-over';
                 exportCtx.drawImage(drawingCanvas, 0, 0); // Draw the transparent drawing layer onto export canvas
 
-                const dataURL = exportCanvas.toDataURL('image/png');
+                // Get the image as a Blob
+                const imageBlob = await new Promise(resolve => {
+                    exportCanvas.toBlob(blob => {
+                        resolve(blob);
+                    }, 'image/png'); // Specify PNG format
+                });
 
-                // --- Android Export Logic ---
-                if (window.cordova) {
-                    console.log("Attempting to export on Cordova (Android/iOS)");
-                    checkAndRequestPermissions(() => {
-                        saveImageToDevice(dataURL);
-                    });
+                if (!imageBlob) {
+                    console.error("Failed to create image blob from canvas.");
+                    alert('Error: Could not create image for export.');
+                    return;
+                }
+
+                // Define a suggested file name
+                const fileName = "rorschach_art_" + Date.now() + ".png"; // Unique filename
+
+                // Save the Blob using cordova-plugin-save-dialog
+                if (window.cordova && window.cordova.plugins && window.cordova.plugins.saveDialog) {
+                    console.log("Calling saveDialog.saveFile with blob and filename...");
+                    const uri = await cordova.plugins.saveDialog.saveFile(imageBlob, fileName);
+                    console.info("The Rorschach image has been successfully saved to:", uri);
+                    alert("Image saved successfully to: " + uri + "\nCheck your device's gallery or files.");
                 } else {
-                    // Fallback for desktop browser (original logic)
-                    console.log("Exporting on Desktop browser");
+                    console.warn("cordova.plugins.saveDialog is not available. Falling back to browser download.");
+                    // Fallback to browser download if not in Cordova environment or plugin not found
+                    const url = URL.createObjectURL(imageBlob);
                     const a = document.createElement('a');
-                    a.href = dataURL;
-                    a.download = 'rorschach_art_' + Date.now() + '.png'; // Add timestamp for unique name
+                    a.href = url;
+                    a.download = fileName;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                }
-            });
-        }
-
-        // Function to check and request permissions
-        function checkAndRequestPermissions(callback) {
-            if (cordova.plugins.permissions) {
-                // For Android 13 (API 33) and above, WRITE_EXTERNAL_STORAGE is deprecated for media files.
-                // READ_MEDIA_IMAGES is the new permission for image access.
-                // We'll request WRITE_EXTERNAL_STORAGE for broader compatibility on older Androids
-                // and rely on MediaStore for newer ones where WRITE_EXTERNAL_STORAGE is no longer needed
-                // for media files, or use READ_MEDIA_IMAGES if specifically saving to photos.
-                // For simplicity, we'll request WRITE_EXTERNAL_STORAGE as it often covers enough for basic saving.
-                // If you face issues on Android 13+, you might need to adjust this for READ_MEDIA_IMAGES.
-
-                const permission = cordova.plugins.permissions.WRITE_EXTERNAL_STORAGE; // Fallback for general write access
-                // const permission = cordova.plugins.permissions.READ_MEDIA_IMAGES; // For Android 13+ specifically for images
-
-                cordova.plugins.permissions.checkPermission(permission, function(status) {
-                    if (status.hasPermission) {
-                        console.log("Permission already granted:", permission);
-                        callback();
-                    } else {
-                        console.warn("Permission not granted, requesting:", permission);
-                        cordova.plugins.permissions.requestPermission(permission, function(status) {
-                            if (status.hasPermission) {
-                                console.log("Permission granted after request:", permission);
-                                callback();
-                            } else {
-                                console.error("Permission denied to " + permission + ". Cannot save file.");
-                                alert("Permission denied. To save your art, please enable storage permissions for this app in your device settings.");
-                            }
-                        }, function(error) {
-                            console.error("Permission request error:", error);
-                            alert("Error requesting permission: " + error);
-                        });
-                    }
-                }, function(error) {
-                    console.error("Permission check error:", error);
-                    alert("Error checking permission: " + error);
-                });
-            } else {
-                console.warn("cordova-plugin-android-permissions not found. Permissions might not be handled correctly on Android.");
-                callback(); // Proceed without explicit permission check if plugin is missing (might fail)
-            }
-        }
-
-        // Function to save the DataURL as an image file on the device
-        function saveImageToDevice(dataURL) {
-            const fileName = 'rorschach_art_' + Date.now() + '.png';
-            const folderName = 'RorschachArt'; // Custom folder name
-
-            // Get the base64 part of the DataURL
-            const base64Data = dataURL.replace(/^data:image\/png;base64,/, "");
-
-            // Choose directory: For images, externalRootDirectory (Pictures) is best for gallery visibility.
-            // For general files, use cordova.file.externalDataDirectory or cordova.file.externalCacheDirectory
-            // We'll use externalRootDirectory and then specify environment.DIRECTORY_PICTURES for the final path.
-            // This leverages MediaStore on newer Android versions.
-            
-            // Check if cordova.file.externalRootDirectory is available (should be with cordova-plugin-file)
-            if (window.cordova && window.cordova.file && window.cordova.file.externalRootDirectory) {
-                console.log("externalRootDirectory available:", cordova.file.externalRootDirectory);
-
-                // Use the Pictures directory within externalRootDirectory
-                // This path maps to /storage/emulated/0/Pictures on most devices
-                const path = cordova.file.externalRootDirectory + 'Pictures/' + folderName + '/';
-
-                window.resolveLocalFileSystemURL(path, function(dirEntry) {
-                    // Directory exists or was created, now create the file
-                    dirEntry.getFile(fileName, { create: true, exclusive: false }, function(fileEntry) {
-                        fileEntry.createWriter(function(fileWriter) {
-                            fileWriter.onwriteend = function() {
-                                console.log("File saved successfully to: " + fileEntry.toURL());
-                                alert("Your Rorschach art has been saved to: " + folderName + " in your Pictures folder!");
-                                // Trigger media scanner to make the file visible in the gallery immediately
-                                if (cordova.plugins.MediaScannerPlugin) {
-                                    cordova.plugins.MediaScannerPlugin.scanFile(fileEntry.toURL(), function() {
-                                        console.log("Media scan complete.");
-                                    }, function(err) {
-                                        console.error("Media scan error:", err);
-                                    });
-                                }
-                            };
-                            fileWriter.onerror = function(e) {
-                                console.error("Error writing file: " + e.toString());
-                                alert("Error saving file: " + e.toString());
-                            };
-
-                            // Convert base64 to Blob
-                            const blob = b64toBlob(base64Data, 'image/png');
-                            fileWriter.write(blob);
-
-                        }, function(error) {
-                            console.error("Error creating file writer:", JSON.stringify(error));
-                            alert("Error creating file writer: " + JSON.stringify(error));
-                        });
-                    }, function(error) {
-                        console.error("Error getting file entry:", JSON.stringify(error));
-                        alert("Error creating file: " + JSON.stringify(error));
-                    });
-                }, function(error) {
-                    // Directory does not exist, try creating it
-                    console.warn("Directory not found, attempting to create: " + path);
-                    window.resolveLocalFileSystemURL(cordova.file.externalRootDirectory + 'Pictures/', function(picturesDir) {
-                        picturesDir.getDirectory(folderName, { create: true, exclusive: false }, function(newDirEntry) {
-                            console.log("Directory created: " + newDirEntry.toURL());
-                            // Now that the directory is created, recursively call saveImageToDevice
-                            // to proceed with saving the file within the new directory.
-                            // We need to pass the full dataURL again.
-                            saveImageToDevice(dataURL); // Recurse
-                        }, function(dirError) {
-                            console.error("Error creating directory: " + JSON.stringify(dirError));
-                            alert("Error creating folder: " + JSON.stringify(dirError));
-                        });
-                    }, function(rootError) {
-                         console.error("Error resolving Pictures root directory: " + JSON.stringify(rootError));
-                         alert("Cannot access Pictures folder: " + JSON.stringify(rootError));
-                    });
-                });
-            } else {
-                console.error("cordova.file.externalRootDirectory not available. Is cordova-plugin-file installed?");
-                alert("File system not ready. Please ensure Cordova plugins are installed correctly.");
-            }
-        }
-
-        // Utility function to convert base64 to Blob
-        function b64toBlob(b64Data, contentType, sliceSize) {
-            contentType = contentType || '';
-            sliceSize = sliceSize || 512;
-
-            var byteCharacters = atob(b64Data);
-            var byteArrays = [];
-
-            for (var offset = 0; offset < byteCharacters.length; offset += sliceSize) {
-                var slice = byteCharacters.slice(offset, offset + sliceSize);
-
-                var byteNumbers = new Array(slice.length);
-                for (var i = 0; i < slice.length; i++) {
-                    byteNumbers[i] = slice.charCodeAt(i);
+                    URL.revokeObjectURL(url);
+                    alert("Image downloaded to your browser's downloads folder.");
                 }
 
-                var byteArray = new Uint8Array(byteNumbers);
-                byteArrays.push(byteArray);
+            } catch (e) {
+                console.error("Error exporting image:", e);
+                alert("Failed to save image: " + e.message);
             }
-
-            var blob = new Blob(byteArrays, { type: contentType });
-            return blob;
         }
 
-        // --- End Cordova Specific Export/Download Logic ---
-
-
-        // Top Bar Functionality (Help Modal - remains the same)
+        // Get the modal elements for the help popup
         const helpModal = document.getElementById("helpModal");
         const helpButton = document.getElementById("helpButton");
         const closeButton = document.querySelector("#helpModal .close-button"); // Ensure it targets the modal's close button
@@ -819,8 +689,19 @@
             }
         });
 
+
+        // Background Color Picker Logic using hidden input
+        document.getElementById('bgColorButton').addEventListener('click', () => {
+            hiddenBgColorPicker.value = currentBackgroundColor; // Set its current value
+            hiddenBgColorPicker.click(); // Trigger the click
+        });
+
+        hiddenBgColorPicker.addEventListener('input', (e) => {
+            currentBackgroundColor = e.target.value;
+            restoreCanvasState(); // Redraw main canvas with new background immediately
+        });
+
         // Initial setup and drawing
-        // Call restoreCanvasState here directly, as it doesn't depend on Cordova plugins
         restoreCanvasState();
         updateColorPickerBackground(); // Set initial color picker button background
     </script>
