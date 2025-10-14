@@ -18,7 +18,7 @@
 
         body {
             font-family: 'Arial', sans-serif;
-            background: linear-gradient(45deg, rgba(180, 230, 255, 0.8), rgba(255, 255, 255, 0.8));
+            background: linear-gradient(45deg,#ffaaaa, rgba(255, 255, 255, 0.8));
             display: flex;
             flex-direction: column; /* Changed to column to stack elements vertically */
             justify-content: center;
@@ -34,8 +34,8 @@
 
         .canvas-container {
             position: relative;
-            width: 90vmin; /* Make it a square based on the smaller dimension */
-            height: 90vmin;
+            width: 70vmin; /* Make it a square based on the smaller dimension */
+            height: 70vmin;
             /* Background of the container, acts as the "true" background if canvas is transparent */
             background-color: white; 
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
@@ -255,7 +255,9 @@
 </head>
 <body>
     <div class="top-bar">
-        <button id="saveImageButton"><i class="fas fa-file-export"></i></button>
+                <button id="clearCanvas"><i class="fas fa-file"></i></button>
+
+        <button id="saveImageButton"><i class="fas fa-save"></i></button>
         <button id="helpButton"><i class="fas fa-question-circle"></i></button>
         <button id="undoButton"><i class="fas fa-undo"></i></button>
     </div>
