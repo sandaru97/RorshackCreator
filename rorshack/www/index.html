@@ -18,27 +18,75 @@
 
         body {
             font-family: 'Arial', sans-serif;
-            background: linear-gradient(45deg,#ffaaaa, rgba(255, 255, 255, 0.8));
+            /* Use the CSS variable for the diluted canvas color */
+            background: linear-gradient(45deg, var(--body-gradient-color, #ffffff), #ffffff); 
             display: flex;
-            flex-direction: column; /* Changed to column to stack elements vertically */
-            justify-content: center;
+            flex-direction: column; 
+            justify-content: flex-start; /* Align to top to use available space for canvas */
             align-items: center;
             min-height: 100vh;
             position: relative;
-            overflow: hidden;
-            gap: 20px; /* Space between canvas and toolbars */
-          /*******************************/
-
-
+            overflow-x: hidden; /* Prevent horizontal scroll */
+            padding-top: 70px; /* Space for fixed top-bar */
+            padding-bottom: 70px; /* Space for fixed tools bar */
+            justify-content: center; /* Horizontal centering for the canvas inside */
+            align-items: center;
+        }
+        
+        /* --- TOOLBAR STYLES (Key Changes for Visibility) --- */
+        .top-bar {
+            position: fixed; /* Fixed position */
+            top: 0; /* Stick to the top */
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center; /* Center buttons horizontally */
+            z-index: 100; /* High z-index to stay on top */
+            background: rgba(255, 255, 255, 0.95); /* Nearly opaque background for readability */
+            border-radius: 0; /* Remove radius to cover full top edge */
+            padding: 10px 20px;
+            gap: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
+        .tools {
+            position: fixed; /* Fixed position */
+            bottom: 0; /* Stick to the bottom */
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center; /* Center buttons horizontally */
+            z-index: 100; /* High z-index to stay on top */
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 0;
+            padding: 10px 5px; /* Reduced padding for more space */
+            gap: 10px; /* Reduced gap for more space */
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+            /* Optional: Add overflow to allow horizontal scrolling of tools if needed */
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        /* --- CANVAS CONTAINER STYLES --- */
         .canvas-container {
             position: relative;
-            width: 70vmin; /* Make it a square based on the smaller dimension */
-            height: 70vmin;
+            /* Use calc to limit height based on remaining viewport space */
+            height: calc(100vh - 140px); /* 100vh minus top-bar height (70px) and bottom-bar height (70px) */
+            max-width: 95vw; /* Max width relative to viewport */
             /* Background of the container, acts as the "true" background if canvas is transparent */
             background-color: white; 
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            margin: 10px 0; /* Keep some margin for better appearance */
+            
+            /* Ensure the canvas container is the smallest dimension possible for the content area */
+            width: calc(100vh - 140px);
+            width: min(calc(100vh - 140px), 95vw);
+            height: min(calc(100vh - 140px), 95vw);
+            /* Use flex-grow to ensure it takes up ALL available space between the toolbars */
+
+            /* Vertical centering for the canvas inside */
+            aspect-ratio: 1 / 1;
+
         }
 
         canvas {
@@ -50,28 +98,7 @@
             touch-action: none;
         }
 
-        .tools {
-            position: relative; /* Changed to relative */
-            display: flex;
-            z-index: 10;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 15px;
-            padding: 10px 20px;
-            gap: 15px;
-            /* Removed bottom positioning */
-        }
-
-        .top-bar {
-            position: relative; /* Changed to relative */
-            display: flex;
-            z-index: 10;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 15px;
-            padding: 10px 20px;
-            gap: 15px;
-            /* Removed top positioning */
-        }
-
+        /* --- BUTTON STYLES (Kept mostly the same) --- */
         .tools button,
         .tools div,
         .top-bar button,
@@ -88,8 +115,9 @@
             align-items: center;
             width: 50px; /* Made buttons bigger */
             height: 50px; /* Made buttons bigger */
+            flex-shrink: 0; /* Prevent buttons from shrinking on small screens */
         }
-
+        
         .tools svg,
         .tools i,
         .top-bar svg,
@@ -118,6 +146,12 @@
             box-shadow: 0 0 0 3px white, 0 2px 5px rgba(0, 0, 0, 0.1); /* White outline + original shadow */
         }
 
+        /* Make the brush container relative so the slider positions correctly relative to it */
+        #brush-size-container {
+            position: relative; 
+            z-index: 120;
+        }
+
         #brush-size-container:hover {
             background: linear-gradient(135deg, rgba(255, 255, 0, 0.5), rgba(0, 255, 0, 0.5));
         }
@@ -140,18 +174,31 @@
             background: linear-gradient(135deg, rgba(0, 150, 255, 0.5), rgba(255, 100, 0, 0.5));
         }
 
-        #brush-slider-container {
-            display: none;
-            position: absolute;
-            top: -90px; /* Adjust if needed based on larger button size */
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-            width: 200px;
-        }
+        /* Corrected brush slider container styles for popup */
+        /* Update the slider container's position */
+/* Update the slider container's position */
+#brush-slider-container {
+    display: none; 
+    /* CRITICAL FIX: Change position to fixed to stack above the fixed toolbar */
+    position: fixed; 
+    
+    /* Calculate bottom position: Toolbar height (~70px) + a small gap (5px) */
+    bottom: 85px; 
+    
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.85); 
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+    width: 200px;
+    flex-direction: column; 
+    justify-content: center;
+    align-items: center;
+    
+    /* Ensure it's on top of the help modal (z-index 101) */
+    z-index: 999; 
+}
 
         #brush-slider-container input {
             width: 100%;
@@ -174,7 +221,7 @@
         .modal {
             display: none; /* Hidden by default */
             position: fixed; /* Stay in place */
-            z-index: 11; /* Sit on top, higher than other elements */
+            z-index: 101; /* Higher than toolbars */
             left: 0;
             top: 0;
             width: 100%; /* Full width */
@@ -255,11 +302,10 @@
 </head>
 <body>
     <div class="top-bar">
-                <button id="clearCanvas"><i class="fas fa-file"></i></button>
-
         <button id="saveImageButton"><i class="fas fa-save"></i></button>
-        <button id="helpButton"><i class="fas fa-question-circle"></i></button>
         <button id="undoButton"><i class="fas fa-undo"></i></button>
+        <button id="clearCanvas"><i class="fas fa-trash"></i></button>
+        <button id="helpButton"><i class="fas fa-question-circle"></i></button>
     </div>
     <div class="canvas-container">
         <canvas id="paintCanvas"></canvas>
@@ -277,7 +323,6 @@
         </div>
         <button id="eraserTool"><i class="fas fa-eraser"></i></button>
         <button id="bgColorButton"><i class="fas fa-fill-drip"></i></button>
-        <button id="clearCanvas"><i class="fas fa-trash"></i></button>
         <input type="color" id="hiddenBgColorPicker" style="display: none; position: absolute; top: -9999px; left: -9999px; opacity: 0; pointer-events: none;">
     </div>
 
@@ -336,11 +381,27 @@
 
         // Set canvases to be a square and synchronize their sizes
         function resizeCanvases() {
-            const size = Math.min(window.innerWidth, window.innerHeight) * 0.8;
+            // Determine the maximum available space for the canvas container after accounting for toolbars.
+            const topBarHeight = document.querySelector('.top-bar').offsetHeight || 70; // Estimate 70px if not yet measured
+            const toolsBarHeight = document.querySelector('.tools').offsetHeight || 70; // Estimate 70px
+            const verticalPadding = topBarHeight + toolsBarHeight + 20; // Add margins/gaps
+            
+            const maxVerticalSize = window.innerHeight - verticalPadding;
+            const maxHorizontalSize = window.innerWidth * 0.95; // 95% of screen width
+
+            const size = Math.min(maxVerticalSize, maxHorizontalSize);
+            
+            // Apply size to canvas elements
             mainCanvas.width = size;
             mainCanvas.height = size;
             drawingCanvas.width = size;
             drawingCanvas.height = size;
+
+            // Update the canvas container size for visual positioning (optional, but good practice)
+            document.querySelector('.canvas-container').style.width = `${size}px`;
+            document.querySelector('.canvas-container').style.height = `${size}px`;
+
+
             restoreCanvasState(); // Redraw everything after resize
         }
 
@@ -348,14 +409,7 @@
         resizeCanvases();
         window.addEventListener('resize', resizeCanvases);
 
-        function drawDividingLine() {
-            mainCtx.strokeStyle = '#ccc';
-            mainCtx.lineWidth = 1;
-            mainCtx.beginPath();
-            mainCtx.moveTo(mainCanvas.width / 2, 0);
-            mainCtx.lineTo(mainCanvas.width / 2, mainCanvas.height);
-            mainCtx.stroke();
-        }
+        // *** drawDividingLine() removed ***
 
         let lastX, lastY; // To store the last position for continuous drawing
 
@@ -414,8 +468,7 @@
             mainCtx.fillStyle = currentBackgroundColor;
             mainCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
 
-            // 3. Draw the dividing line on the main canvas
-            drawDividingLine();
+            // 3. *** drawDividingLine() call removed ***
 
             // 4. Draw the current state of the drawingCanvas onto the main canvas
             mainCtx.globalCompositeOperation = 'source-over'; // Always draw drawingCanvas on top
@@ -545,15 +598,16 @@
         const brushSizeContainer = document.getElementById('brush-size-container');
         const brushSliderContainer = document.getElementById('brush-slider-container');
 
+        // *** Use 'flex' for display to ensure proper popup layout ***
         brushSizeContainer.addEventListener('click', (event) => {
             // Prevent the click from propagating to the document body if the slider itself is clicked
             event.stopPropagation();
-            brushSliderContainer.style.display = brushSliderContainer.style.display === 'block' ? 'none' : 'block';
+            brushSliderContainer.style.display = (brushSliderContainer.style.display === 'flex') ? 'none' : 'flex';
         });
 
         // Hide brush slider if clicked outside
         document.addEventListener('click', (event) => {
-            if (!brushSizeContainer.contains(event.target) && brushSliderContainer.style.display === 'block') {
+            if (!brushSizeContainer.contains(event.target) && brushSliderContainer.style.display === 'flex') {
                 brushSliderContainer.style.display = 'none';
             }
         });
@@ -615,13 +669,7 @@
                 exportCtx.fillStyle = currentBackgroundColor;
                 exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
 
-                // Draw the dividing line on the export canvas
-                exportCtx.strokeStyle = '#ccc'; // Use same style as mainCtx
-                exportCtx.lineWidth = 1;
-                exportCtx.beginPath();
-                exportCtx.moveTo(exportCanvas.width / 2, 0);
-                exportCtx.lineTo(exportCanvas.width / 2, exportCanvas.height);
-                exportCtx.stroke();
+                // *** Line drawing for export REMOVED ***
 
                 // Draw the current drawingCanvas content on top
                 exportCtx.globalCompositeOperation = 'source-over';
@@ -691,6 +739,36 @@
             }
         });
 
+        /**
+         * Dilutes a hex color by mixing it with white, making it lighter/less saturated.
+         * @param {string} hex - The original hex color (e.g., '#000000').
+         * @param {number} amount - The amount to mix with white (0 to 1, where 0.4 is 40% white).
+         * @returns {string} The new diluted hex color.
+         */
+        function diluteColor(hex, amount) {
+            // Ensure hex is in the correct format and remove '#'
+            hex = hex.replace(/^#/, '');
+
+            // Parse r, g, b components
+            let r = parseInt(hex.substring(0, 2), 16);
+            let g = parseInt(hex.substring(2, 4), 16);
+            let b = parseInt(hex.substring(4, 6), 16);
+
+            // Mix with white (255, 255, 255)
+            r = Math.round(r + (255 - r) * amount);
+            g = Math.round(g + (255 - g) * amount);
+            b = Math.round(b + (255 - b) * amount);
+
+            // Clamp values to 0-255
+            r = Math.min(255, r);
+            g = Math.min(255, g);
+            b = Math.min(255, b);
+            
+            // Convert back to hex and return
+            const toHex = (c) => c.toString(16).padStart(2, '0');
+            return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+        }
+
 
         // Background Color Picker Logic using hidden input
         document.getElementById('bgColorButton').addEventListener('click', () => {
@@ -700,12 +778,21 @@
 
         hiddenBgColorPicker.addEventListener('input', (e) => {
             currentBackgroundColor = e.target.value;
+            
+            const dilutionFactor = 0.5; // You can adjust this value (e.g., 0.3 for less dilution, 0.7 for more)
+            const dilutedColor = diluteColor(currentBackgroundColor, dilutionFactor);
+
+            // Update the body's CSS variable for the gradient with the diluted color
+            document.body.style.setProperty('--body-gradient-color', dilutedColor);
+
             restoreCanvasState(); // Redraw main canvas with new background immediately
         });
 
         // Initial setup and drawing
         restoreCanvasState();
         updateColorPickerBackground(); // Set initial color picker button background
+        // Set initial body gradient color based on the default canvas color
+        document.body.style.setProperty('--body-gradient-color', diluteColor(currentBackgroundColor, 0.5));
     </script>
 </body>
 </html>
