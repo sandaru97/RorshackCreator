@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Yidaki Staccato</title>
+    <style>
+        body {
+            background-color: #0f0a08;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Courier New', Courier, monospace;
+            color: #d35400;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        #didgeVisualText { margin-bottom: 20px; font-weight: bold; text-align: center; letter-spacing: 2px; }
+
+        #didgeVisual {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #4e342e, #1a0f0a);
+            border: 6px solid #2b1d19;
+            transition: transform 0.05s ease-out;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .active { border-color: #e67e22 !important; box-shadow: 0 0 30px #d35400; }
+        #status { margin-top: 30px; font-size: 0.9em; opacity: 0.7; }
+        .hint { margin-top: 10px; font-size: 0.7em; color: #8d4925; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+    <div id="didgeVisualText">TAP TO CONNECT</div>
+    <div id="didgeVisual"></div>
+    <div id="status">MIC READY</div>
+    <div class="hint">Try short rhythmic breaths</div>
+
+    <audio id="didgeSample" src="didgeridoo.wav" loop crossorigin="anonymous" playsinline></audio>
+
+    <script>
+        const audio = document.getElementById('didgeSample');
+        const visual = document.getElementById('didgeVisual');
+        const statusText = document.getElementById('status');
+        const visualText = document.getElementById('didgeVisualText');
+        
+        let audioContext, analyser, microphone, gainNode, source;
+        let isInitialized = false;
+
+        // --- STACCATO CALIBRATION ---
+        const SENSITIVITY = 2.5; 
+        const THRESHOLD = 0.06; // Adjust this if your room has background noise
+        const ATTACK = 0.02;    // How fast sound starts (20ms)
+        const RELEASE = 0.03;   // How fast sound stops (30ms) - VERY SHORT for staccato
+
+        async function init() {
+            if (isInitialized) {
+                if (audioContext && audioContext.state === 'suspended') await audioContext.resume();
+                return;
+            }
+
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
+                });
+
+                microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+
+                source = audioContext.createMediaElementSource(audio);
+                gainNode = audioContext.createGain();
+                gainNode.connect(audioContext.destination);
+                source.connect(gainNode);
+
+                gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                audio.play();
+
+                visualText.textContent = "YIDAKI AWAKE";
+                isInitialized = true;
+                process();
+            } catch (err) {
+                visualText.textContent = "MIC ERROR";
+            }
+        }
+
+        function process() {
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            let lastState = false; // false = silent, true = playing
+
+            function update() {
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                let average = sum / dataArray.length;
+                let volumeLevel = (average / 128) * SENSITIVITY;
+
+                if (volumeLevel > THRESHOLD) {
+                    // BREATHING DETECTED
+                    let targetVol = Math.min(volumeLevel, 1.0);
+                    
+                    gainNode.gain.cancelScheduledValues(audioContext.currentTime);
+                    // Fast ramp up to volume
+                    gainNode.gain.linearRampToValueAtTime(targetVol, audioContext.currentTime + ATTACK);
+                    
+                    visual.style.transform = `scale(${1 + (targetVol * 0.4)})`;
+                    visual.classList.add('active');
+                    statusText.textContent = "• BLOWING •";
+                    lastState = true;
+                } else {
+                    // SILENCE DETECTED
+                    if (lastState) {
+                        gainNode.gain.cancelScheduledValues(audioContext.currentTime);
+                        // Instant ramp down to zero
+                        gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + RELEASE);
+                        
+                        visual.style.transform = `scale(1)`;
+                        visual.classList.remove('active');
+                        statusText.textContent = "---";
+                        lastState = false;
+                    }
+                }
+                requestAnimationFrame(update);
+            }
+            update();
+        }
+
+        window.addEventListener('pointerdown', init);
+    </script>
+</body>
+</html>
