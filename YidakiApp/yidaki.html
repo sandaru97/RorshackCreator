@@ -2,147 +2,213 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Synth-Doo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Synth-Doo Obsidian Pro</title>
     <style>
-        body { background: #1a0f08; color: #f3e5ab; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
-        .container { text-align: center; background: rgba(0, 0, 0, 0.9); padding: 40px; border-radius: 40px; border: 2px solid #5d2e0c; width: 320px; box-shadow: 0 0 60px #000; }
-        h2 { letter-spacing: 4px; color: #ff7b00; margin-bottom: 5px; }
-        p { font-size: 10px; margin-bottom: 25px; opacity: 0.7; }
-        #visualizer { width: 100px; height: 100px; border-radius: 50%; background: #ff7b00; margin: 30px auto; opacity: 0.1; box-shadow: 0 0 40px #ff7b00; transition: transform 0.05s; border: 4px solid #5d2e0c; }
-        button { padding: 20px 40px; font-size: 1.1rem; background: #8b4513; color: white; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; box-shadow: 0 5px 0 #4e270b; transition: 0.2s; }
-        button:hover { background: #a0522d; }
-        button:active { transform: translateY(4px); box-shadow: 0 1px 0 #4e270b; }
-        .controls { margin-top: 30px; display: none; text-align: left; }
-        label { font-size: 10px; display: block; margin-bottom: 5px; color: #a08c7d; }
-        input { width: 100%; accent-color: #ff7b00; margin-bottom: 15px; }
-        #status { margin-top: 20px; font-size: 0.75rem; color: #8b4513; font-weight: bold; text-transform: uppercase; }
+        :root {
+            --gold: #ff7b00;
+            --wood: #3d1f08;
+            --glass: rgba(255, 255, 255, 0.05);
+            --key-size: 42px; 
+            --gap: 6px;
+            --theme-color: #ff7b00;
+        }
+
+        body { 
+            background: #050302; 
+            color: #f3e5ab; 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            display: flex; justify-content: center; align-items: center; 
+            height: 100vh; margin: 0; overflow: hidden;
+            transition: background 0.8s ease;
+        }
+
+        .container { 
+            text-align: center; 
+            background: linear-gradient(145deg, #150a05, #000000); 
+            padding: 20px; border-radius: 50px; border: 1px solid #2a1a0a; 
+            width: 95vw; max-width: 800px; box-shadow: 0 50px 100px rgba(0,0,0,0.9);
+            position: relative;
+        }
+
+        /* INSTRUMENT SLIDER (7 SPIRITS) */
+        .instrument-selector {
+            width: 90%; height: 70px; margin: 0 auto 15px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 20px; display: flex; align-items: center; justify-content: space-between;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .nav-btn { background: none; border: none; color: var(--theme-color); font-size: 24px; cursor: pointer; padding: 0 20px; transition: 0.3s; }
+        .instrument-info { flex-grow: 1; }
+        .instrument-name { font-size: 0.8rem; letter-spacing: 4px; font-weight: 900; color: var(--theme-color); margin: 0; text-transform: uppercase; transition: 0.3s; }
+        .instrument-desc { font-size: 0.6rem; color: #a08c7d; margin: 2px 0 0; letter-spacing: 1px; }
+
+        /* CENTER CONSOLE */
+        .center-console { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 20px 0; }
+        .btn-round { width: 55px; height: 55px; border-radius: 50%; background: var(--glass); border: 1px solid var(--wood); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
+        .btn-round span { font-size: 8px; font-weight: bold; color: #a08c7d; letter-spacing: 1px; }
+
+        .blow-master { width: 100px; height: 100px; border-radius: 50%; background: #000; border: 3px solid var(--wood); position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        #visual-aura { position: absolute; width: 100%; height: 100%; background: var(--theme-color); opacity: 0; border-radius: 50%; filter: blur(20px); transition: opacity 0.05s; transform: scale(0.5); }
+        .blow-label { z-index: 2; font-weight: 900; font-size: 11px; letter-spacing: 2px; color: var(--theme-color); transition: 0.3s; }
+
+        .vocal-split { width: 85px; height: 85px; border-radius: 50%; background: #000; border: 2px solid var(--wood); display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; }
+        .vocal-zone { display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 900; color: #4e270b; border: 0.5px solid rgba(61, 31, 8, 0.2); cursor: pointer; }
+        .vocal-zone.active { background: var(--theme-color); color: #000; }
+        .vocal-zone:nth-child(5) { grid-column: span 2; }
+
+        /* KEYBOARD */
+        .keyboard-engine { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 15px; }
+        .row { display: flex; justify-content: center; }
+        .row-sharps { margin-bottom: 2px; padding-right: calc(var(--key-size) + var(--gap)); }
+        .key { width: var(--key-size); height: var(--key-size); border-radius: 50%; background: var(--glass); border: 1px solid #2a1a0a; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: rgba(243, 229, 171, 0.2); cursor: pointer; margin: 0 calc(var(--gap) / 2); transition: 0.2s; }
+        .key.active { background: var(--theme-color)!important; color: #000!important; transform: scale(1.1); box-shadow: 0 0 15px var(--theme-color); }
+        .key.sharp { background: #000; color: var(--theme-color); }
+        .spacer { width: var(--key-size); margin: 0 calc(var(--gap) / 2); }
+
+        #startButton { padding: 20px 60px; background: var(--gold); color: #000; border: none; border-radius: 50px; font-weight: 900; cursor: pointer; letter-spacing: 3px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>SYNTH-DOO</h2>
-    <p>PHYSICAL MODELING ENGINE</p>
-    <div id="visualizer"></div>
-    <button id="startButton">WAKE THE SPIRIT</button>
-    <div id="status">Awaiting Input...</div>
-    
-    <div class="controls" id="settings">
-        <label>MIC SENSITIVITY (NOISE GATE)</label>
-        <input type="range" id="threshold" min="5" max="60" value="20">
-        
-        <label>RESONANCE (THE "WAH")</label>
-        <input type="range" id="resonance" min="5" max="25" value="15">
+    <div class="instrument-selector">
+        <button class="nav-btn" id="prevDoo">❮</button>
+        <div class="instrument-info">
+            <p class="instrument-name" id="dooName">Obsidian Core</p>
+            <p class="instrument-desc" id="dooDesc">Traditional Deep Buzz</p>
+        </div>
+        <button class="nav-btn" id="nextDoo">❯</button>
+    </div>
+
+    <div id="setup-view"><button id="startButton">AWAKEN SPIRIT</button></div>
+
+    <div id="interface" style="display: none;">
+        <div class="center-console">
+            <div class="btn-round"><span>HELP</span></div>
+            <div class="btn-round"><span>SET</span></div>
+            <div class="blow-master"><div id="visual-aura"></div><span class="blow-label">BLOW</span></div>
+            <div class="btn-round" id="recordBtn" style="border-color: #600;"><span>REC</span></div>
+            <div class="vocal-split">
+                <div class="vocal-zone" data-v="600">WA</div>
+                <div class="vocal-zone" data-v="400">WE</div>
+                <div class="vocal-zone" data-v="300">WU</div>
+                <div class="vocal-zone" data-v="250">WI</div>
+                <div class="vocal-zone active" data-v="450">WO</div>
+            </div>
+        </div>
+
+        <div class="keyboard-engine">
+            <div class="row row-sharps">
+                <div class="key sharp" data-freq="69.30">C#</div>
+                <div class="key sharp" data-freq="77.78">D#</div>
+                <div class="spacer"></div>
+                <div class="key sharp" data-freq="92.50">F#</div>
+                <div class="key sharp" data-freq="103.83">G#</div>
+                <div class="key sharp" data-freq="116.54">A#</div>
+            </div>
+            <div class="row row-naturals">
+                <div class="key active" data-freq="65.41">C</div>
+                <div class="key" data-freq="73.42">D</div>
+                <div class="key" data-freq="82.41">E</div>
+                <div class="key" data-freq="87.31">F</div>
+                <div class="key" data-freq="98.00">G</div>
+                <div class="key" data-freq="110.00">A</div>
+                <div class="key" data-freq="123.47">B</div>
+                <div class="key" data-freq="130.81">C</div>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
-    let audioCtx, analyser, gainNode, dataArray, formantFilter;
-    let isRunning = false;
+    const spirits = [
+        { name: "Obsidian Core", desc: "Traditional Deep Buzz", type: "sawtooth", color: "#ff7b00", grit: 600, bg: "#050302" },
+        { name: "Ancient Eucalyptus", desc: "Hollow & Woody", type: "square", color: "#88cc44", grit: 300, bg: "#040602" },
+        { name: "Iron Bark", desc: "High Harmonic Bite", type: "sawtooth", color: "#ff4444", grit: 900, bg: "#080202" },
+        { name: "Spirit Wind", desc: "Soft & Airy", type: "triangle", color: "#44ccff", grit: 100, bg: "#020408" },
+        { name: "Desert Sand", desc: "Grainy & Resonant", type: "sawtooth", color: "#eebb77", grit: 400, bg: "#080602" },
+        { name: "Midnight Ash", desc: "Sub-Heavy Rumble", type: "square", color: "#aa88ff", grit: 500, bg: "#040208" },
+        { name: "Opal Dream", desc: "Crystal Clear Tones", type: "triangle", color: "#ff88cc", grit: 150, bg: "#060206" }
+    ];
+    let cur = 0;
+    let audioCtx, analyser, gainNode, osc, formantFilter, distNode, dataArray, isRunning = false;
+    let baseVowel = 450;
 
-    // Create a distortion curve to simulate wood vibration
-    function makeDistortionCurve(amount) {
-        let k = typeof amount === 'number' ? amount : 50,
-            n_samples = 44100,
-            curve = new Float32Array(n_samples),
-            deg = Math.PI / 180, i = 0, x;
-        for ( ; i < n_samples; ++i ) {
-            x = i * 2 / n_samples - 1;
-            curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) );
-        }
-        return curve;
+    function updateSpirit() {
+        const s = spirits[cur];
+        document.documentElement.style.setProperty('--theme-color', s.color);
+        document.body.style.background = s.bg;
+        document.getElementById('dooName').innerText = s.name;
+        document.getElementById('dooDesc').innerText = s.desc;
+        if(osc) osc.type = s.type;
+        if(distNode) distNode.curve = makeDistortionCurve(s.grit);
     }
 
-    document.getElementById('startButton').addEventListener('click', async () => {
-        if (isRunning) return;
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
-            });
+    document.getElementById('nextDoo').onclick = () => { cur = (cur + 1) % spirits.length; updateSpirit(); };
+    document.getElementById('prevDoo').onclick = () => { cur = (cur - 1 + spirits.length) % spirits.length; updateSpirit(); };
 
-            // Input handling
+    const makeDistortionCurve = (amount) => {
+        let n = 44100, curve = new Float32Array(n);
+        for (let i = 0; i < n; i++) {
+            let x = i * 2 / n - 1;
+            curve[i] = (3 + amount) * x * 20 * (Math.PI / 180) / (Math.PI + amount * Math.abs(x));
+        }
+        return curve;
+    };
+
+    document.getElementById('startButton').onclick = async () => {
+        if (isRunning) return;
+        audioCtx = new AudioContext();
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const micSource = audioCtx.createMediaStreamSource(stream);
-            analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 128;
+            analyser = audioCtx.createAnalyser(); analyser.fftSize = 128;
             micSource.connect(analyser);
 
-            // 1. SOUND SOURCE: Deep Sawtooth
-            const osc = audioCtx.createOscillator();
-            osc.type = "sawtooth";
-            osc.frequency.value = 65.41; // Low C
+            osc = audioCtx.createOscillator(); osc.type = spirits[cur].type; osc.frequency.value = 65.41;
+            distNode = audioCtx.createWaveShaper(); distNode.curve = makeDistortionCurve(spirits[cur].grit);
+            formantFilter = audioCtx.createBiquadFilter(); formantFilter.type = "bandpass"; formantFilter.Q.value = 15;
+            gainNode = audioCtx.createGain(); gainNode.gain.value = 0;
 
-            // 2. WARMTH: Low-pass to remove "plastic" highs
-            const warmth = audioCtx.createBiquadFilter();
-            warmth.type = "lowpass";
-            warmth.frequency.value = 600;
-
-            // 3. GRIT: Waveshaper for the "Growl"
-            const dist = audioCtx.createWaveShaper();
-            dist.curve = makeDistortionCurve(300);
-
-            // 4. FORMANT: Bandpass filter that creates the mouth-shape sound
-            formantFilter = audioCtx.createBiquadFilter();
-            formantFilter.type = "bandpass";
-            formantFilter.frequency.value = 180;
-            formantFilter.Q.value = 15;
-
-            // 5. OUTPUT
-            gainNode = audioCtx.createGain();
-            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-
-            // Chain: Osc -> Warmth -> Distortion -> Formant -> Gain -> Out
-            osc.connect(warmth);
-            warmth.connect(dist);
-            dist.connect(formantFilter);
-            formantFilter.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-
+            osc.connect(distNode).connect(formantFilter).connect(gainNode).connect(audioCtx.destination);
             osc.start();
 
-            // UI logic
+            document.getElementById('setup-view').style.display = 'none';
+            document.getElementById('interface').style.display = 'block';
             dataArray = new Uint8Array(analyser.frequencyBinCount);
-            document.getElementById('startButton').style.display = 'none';
-            document.getElementById('settings').style.display = 'block';
-            document.getElementById('status').innerText = "BLOW INTO MIC";
-            
-            isRunning = true;
-            tick();
+            isRunning = true; tick();
+        } catch (e) { alert("Mic required."); }
+    };
 
-        } catch (err) {
-            document.getElementById('status').innerText = "ERROR: ACCESS DENIED";
-            console.error(err);
-        }
+    document.querySelectorAll('.vocal-zone').forEach(z => {
+        z.onpointerdown = () => {
+            document.querySelectorAll('.vocal-zone').forEach(v => v.classList.remove('active'));
+            z.classList.add('active'); baseVowel = parseInt(z.dataset.v);
+        };
+    });
+
+    document.querySelectorAll('.key').forEach(key => {
+        key.onpointerdown = () => {
+            osc.frequency.setTargetAtTime(parseFloat(key.dataset.freq), audioCtx.currentTime, 0.1);
+            document.querySelectorAll('.key').forEach(k => k.classList.remove('active'));
+            key.classList.add('active');
+        };
     });
 
     function tick() {
         analyser.getByteFrequencyData(dataArray);
-        let volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
-        let thresh = document.getElementById('threshold').value;
-        let resValue = document.getElementById('resonance').value;
-
-        if (volume > thresh) {
-            // Dynamic Tone: Blow harder to sweep the filter frequency
-            // This mimics the "Ooh" to "Wah" transition
-            let targetFreq = 120 + (volume * 12);
-            formantFilter.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.05);
-            formantFilter.Q.value = resValue;
-
-            // Volume responsiveness
+        let vol = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        const aura = document.getElementById('visual-aura');
+        if (vol > 20) {
+            formantFilter.frequency.setTargetAtTime(baseVowel + (vol * 12), audioCtx.currentTime, 0.05);
             gainNode.gain.setTargetAtTime(0.8, audioCtx.currentTime, 0.02);
-            
-            // Visuals
-            visualizer.style.opacity = "1";
-            visualizer.style.transform = `scale(${1 + (volume/25)})`;
-            visualizer.style.filter = `hue-rotate(${volume}deg)`;
+            aura.style.opacity = vol / 80;
+            aura.style.transform = `scale(${0.4 + vol/60})`;
         } else {
             gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
-            visualizer.style.opacity = "0.1";
-            visualizer.style.transform = "scale(1)";
+            aura.style.opacity = 0;
         }
-        
         requestAnimationFrame(tick);
     }
 </script>
